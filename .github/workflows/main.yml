@@ -24,116 +24,50 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android .
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install Android SDK 37
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37" "platform-tools" "build-tools;36.0.0"
+          sdkmanager "platforms;android-37"
+          yes | sdkmanager --licenses || true
 
-      - name: Upgrade Android Gradle Plugin and Gradle
+      - name: Configure Android
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          # Upgrade Android Gradle Plugin
-          for name in [
-              "android/settings.gradle.kts",
-              "android/settings.gradle",
-              "android/build.gradle.kts",
-              "android/build.gradle",
-          ]:
-              p = Path(name)
+          p = Path("android/app/build.gradle.kts")
 
-              if not p.exists():
-                  continue
-
+          if p.exists():
               s = p.read_text()
-
               s = s.replace(
-                  'com.android.application" version "9.1.0"',
-                  'com.android.application" version "9.1.1"'
+                  "compileSdk = flutter.compileSdkVersion",
+                  "compileSdk = 37"
               )
-
               s = s.replace(
-                  'com.android.library" version "9.1.0"',
-                  'com.android.library" version "9.1.1"'
+                  "compileSdk = 36",
+                  "compileSdk = 37"
               )
-
-              s = s.replace(
-                  "com.android.tools.build:gradle:9.1.0",
-                  "com.android.tools.build:gradle:9.1.1"
-              )
-
               p.write_text(s)
 
-          # Upgrade Gradle wrapper
           wrapper = Path(
               "android/gradle/wrapper/gradle-wrapper.properties"
           )
 
           if wrapper.exists():
               s = wrapper.read_text()
-
               s = re.sub(
-                  r"distributionUrl=.*gradle-[0-9.]+-",
-                  "distributionUrl=https\\\\://services.gradle.org/distributions/gradle-9.3.1-",
+                  r"gradle-[0-9.]+-",
+                  "gradle-9.3.1-",
                   s
               )
-
               wrapper.write_text(s)
-
-          # Set compileSdk to 37
-          for name in [
-              "android/app/build.gradle.kts",
-              "android/app/build.gradle"
-          ]:
-              p = Path(name)
-
-              if not p.exists():
-                  continue
-
-              s = p.read_text()
-
-              s = s.replace(
-                  "compileSdk = flutter.compileSdkVersion",
-                  "compileSdk = 37"
-              )
-
-              s = s.replace(
-                  "compileSdk flutter.compileSdkVersion",
-                  "compileSdk 37"
-              )
-
-              s = s.replace(
-                  "compileSdk = 36",
-                  "compileSdk = 37"
-              )
-
-              s = s.replace(
-                  "compileSdk 36",
-                  "compileSdk 37"
-              )
-
-              p.write_text(s)
           PY
 
-      - name: Verify Android configuration
-        run: |
-          echo "===== Android Gradle Plugin ====="
-          grep -R "com.android.application" \
-            android/settings.gradle* \
-            android/build.gradle* || true
-
-          echo "===== compileSdk ====="
-          grep -R "compileSdk" \
-            android/app/build.gradle* || true
-
-          echo "===== Gradle ====="
-          grep "distributionUrl" \
-            android/gradle/wrapper/gradle-wrapper.properties
-
-      - name: Get Flutter dependencies
+      - name: Flutter dependencies
         run: flutter pub get
 
       - name: Build APK
