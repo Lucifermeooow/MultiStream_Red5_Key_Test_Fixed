@@ -1,0 +1,11 @@
+{
+  "name": "multistream-router",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node router.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
